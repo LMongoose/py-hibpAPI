@@ -1,7 +1,18 @@
-﻿# Original author: Lucas Soares Pellizzaro on 2018-10-23
+﻿# Original author: Lucas Soares Pellizzaro on 2019-01-17
 
 _PROXYURL = ""
 _CONNECTION = None
+
+class ConnectionError(Exception):
+	"""Exception raised by connection not started properly.
+	Attributes:
+		message -- explanation of the error
+	"""
+	def __init__(self):
+		self.msg1 = "A connection has not been set,"
+		self.msg2 = " use 'startConnection()' to start a connection"
+		self.msg3 = " and 'setProxy(proxy_url)' if you are using a proxy."
+		self.message = self.msg1+self.msg2+self.msg3
 
 def _getBreaches(p_url):
 	# Starts the request
@@ -9,14 +20,16 @@ def _getBreaches(p_url):
 	this_request = _CONNECTION.request("GET", url=baseurl+p_url)
 	# Checks the response status and returns output
 	if(str(this_request.status) == "200"):
+		import json
+		json_raw = this_request.data.decode("utf-8")
 		func_output = {
 			"statuscode": 200,
-			"output": True
+			"output": json.loads(json_raw)
 		}
 	elif(str(this_request.status) == "404"):
 		func_output = {
 			"statuscode": 404,
-			"output": False
+			"output": []
 		}
 	else:
 		func_output = {
@@ -29,6 +42,7 @@ def startConnection():
 	# Starts the connection
 	import urllib3
 	urllib3.disable_warnings()
+	global _CONNECTION
 	if(_PROXYURL != ""):
 		import sys, platform
 		os_architecture = "x86"
@@ -50,33 +64,76 @@ def startConnection():
 
 def setProxy(p_proxyurl):
 	# TODO: validate p_proxyurl
+	global _PROXYURL
 	PROXY_URL = p_proxyurl
 	start()
 
 def getAllBreachesForAccount(p_email):
-	url = "breachedAccount/"+p_email+"?includeUnverified=true"
-	return _getBreaches(url)
+	try:
+		if(_CONNECTION == None):
+			raise ConnectionError
+		else:
+			url = "breachedAccount/"+p_email+"?includeUnverified=true"
+			return _getBreaches(url)
+	except ConnectionError as e:
+		print(e.message)
 
 def getAllBreachesForAccountOfDomain(p_email, p_domain):
-	url = "breachedAccount/"+p_email+"?domain="+p_domain+"?includeUnverified=true"
-	return _getBreaches(url)
+	try:
+		if(_CONNECTION == None):
+			raise ConnectionError
+		else:
+			url = "breachedAccount/"+p_email+"?domain="+p_domain+"?includeUnverified=true"
+			return _getBreaches(url)
+	except ConnectionError as e:
+		print(e.message)
 
 def getAllPastesForAccount(p_account):
-	url = "pasteaccount/"+p_account
-	return _getBreaches(url)
+	try:
+		if(_CONNECTION == None):
+			raise ConnectionError
+		else:
+			url = "pasteaccount/"+p_account
+			return _getBreaches(url)
+	except ConnectionError as e:
+		print(e.message)
 
 def getAllBreaches():
-	url = "breaches/"
-	return _getBreaches(url)
+	try:
+		if(_CONNECTION == None):
+			raise ConnectionError
+		else:
+			url = "breaches/"
+			return _getBreaches(url)
+	except ConnectionError as e:
+		print(e.message)
 
 def getAllBreachesOfDomain(p_domain):
-	url = "breaches/"+"?domain="+p_domain
-	return _getBreaches(url)
+	try:
+		if(_CONNECTION == None):
+			raise ConnectionError
+		else:
+			url = "breaches/"+"?domain="+p_domain
+			return _getBreaches(url)
+	except ConnectionError as e:
+		print(e.message)
 
 def getSingleBreachedSite(p_name):
-	url = "breach/"+p_name
-	return _getBreaches(url)
+	try:
+		if(_CONNECTION == None):
+			raise ConnectionError
+		else:
+			url = "breach/"+p_name
+			return _getBreaches(url)
+	except ConnectionError as e:
+		print(e.message)
 
 def getAllDataClasses():
-	url = "dataclasses/"
-	return _getBreaches(url)
+	try:
+		if(_CONNECTION == None):
+			raise ConnectionError
+		else:
+			url = "dataclasses/"
+			return _getBreaches(url)
+	except ConnectionError as e:
+		print(e.message)
