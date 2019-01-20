@@ -1,23 +1,19 @@
 ﻿# Original author: Lucas Soares Pellizzaro on 2018-10-23
 
-import urllib3
-urllib3.disable_warnings()
-
 _PROXYURL = ""
-CONNECTION = None
+_CONNECTION = None
 
 def _getBreaches(p_url):
 	# Starts the request
 	baseurl = "https://haveibeenpwned.com/api/v2/"
-	this_request = CONNECTION.request("GET", url=baseurl+p_url)
-
+	this_request = _CONNECTION.request("GET", url=baseurl+p_url)
 	# Checks the response status and returns output
-	if str(this_request.status) == "200":
+	if(str(this_request.status) == "200"):
 		func_output = {
 			"statuscode": 200,
 			"output": True
 		}
-	elif str(this_request.status) == "404":
+	elif(str(this_request.status) == "404"):
 		func_output = {
 			"statuscode": 404,
 			"output": False
@@ -29,9 +25,11 @@ def _getBreaches(p_url):
 		}
 	return func_output
 
-def start():
+def startConnection():
 	# Starts the connection
-	if _PROXYURL != "":
+	import urllib3
+	urllib3.disable_warnings()
+	if(_PROXYURL != ""):
 		import sys, platform
 		os_architecture = "x86"
 		if(platform.system() == "Windows"):
@@ -40,16 +38,15 @@ def start():
 		else:
 			if(("amd64" in platform.release()) or ("x64" in platform.release())):
 				os_architecture = "x64"
-
 		pythonversion = "Python "+sys.version[:5]+" "+"("+os_architecture+")"
 		opsysversion = platform.system()+" "+platform.release()
 		sysinfo = pythonversion+" running on "+opsysversion
 
 		from urllib3 import ProxyManager, make_headers
 		headers = make_headers(keep_alive=False, user_agent="Urllib3 module for "+sysinfo)
-		CONNECTION = urllib3.ProxyManager(proxy_url=_PROXYURL, headers=headers)
+		_CONNECTION = urllib3.ProxyManager(proxy_url=_PROXYURL, headers=headers)
 	else:
-		CONNECTION = urllib3.PoolManager()
+		_CONNECTION = urllib3.PoolManager()
 
 def setProxy(p_proxyurl):
 	# TODO: validate p_proxyurl
