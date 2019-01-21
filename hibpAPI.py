@@ -57,7 +57,7 @@ def startConnection():
 
 def setProxy(p_proxyurl):
 	pattern = """(?:http|https)(?:\:\/\/)(?:[a-z]*(?:\.)?){4}(?:\:[0-9]{1,5})"""
-	if(re.match(pattern,p_proxyurl)):
+	if(re.match(pattern, p_proxyurl)):
 		global _PROXYURL
 		_PROXYURL = p_proxyurl
 	else:
