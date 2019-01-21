@@ -1,10 +1,13 @@
 ﻿# Original author: Lucas Soares Pellizzaro on 2019-01-17
 
-_PROXYURL = ""
+import re
+
 _CONNECTION = None
+_PROXYURL = ""
 
 class ConnectionError(Exception):
-	"""Exception raised by connection not started properly.
+	"""
+	Exception raised by connection not started properly.
 	Attributes:
 		message -- explanation of the error
 	"""
@@ -14,7 +17,7 @@ class ConnectionError(Exception):
 		self.msg3 = " and 'setProxy(proxy_url)' if you are using a proxy."
 		self.message = self.msg1+self.msg2+self.msg3
 
-def _getBreaches(p_url):
+def _getData(p_url):
 	# Starts the request
 	baseurl = "https://haveibeenpwned.com/api/v2/"
 	this_request = _CONNECTION.request("GET", url=baseurl+p_url)
@@ -38,23 +41,13 @@ def _getBreaches(p_url):
 		}
 	return func_output
 
+# Public functions
 def startConnection():
-	# Starts the connection
 	import urllib3
 	urllib3.disable_warnings()
-	import sys, platform
-	os_architecture = "x86"
-	if(platform.system() == "Windows"):
-		if(sys.platform == "win64"):
-			os_architecture = "x64"
-	else:
-		if(("amd64" in platform.release()) or ("x64" in platform.release())):
-			os_architecture = "x64"
-	pythonversion = "Python "+sys.version[:5]+" "+"("+os_architecture+")"
-	opsysversion = platform.system()+" "+platform.release()
-	sysinfo = pythonversion+" running on "+opsysversion
 	from urllib3 import make_headers
-	headers = make_headers(keep_alive=False, user_agent="Urllib3 module for "+sysinfo)
+	USER_AGENT = "hibpAPI/1.0 (A Python interface to the public hibp API)"
+	headers = make_headers(keep_alive=False, user_agent=USER_AGENT)
 	global _CONNECTION
 	if(_PROXYURL != ""):
 		from urllib3 import ProxyManager
@@ -63,77 +56,104 @@ def startConnection():
 		_CONNECTION = urllib3.PoolManager(headers=headers)
 
 def setProxy(p_proxyurl):
-	# TODO: validate p_proxyurl
-	global _PROXYURL
-	PROXY_URL = p_proxyurl
-	start()
+	pattern = """(?:http|https)(?:\:\/\/)(?:[a-z]*(?:\.)?){4}(?:\:[0-9]{1,5})"""
+	if(re.match(pattern,p_proxyurl)):
+		global _PROXYURL
+		_PROXYURL = p_proxyurl
+	else:
+		print("The provided proxy url is invalid.")
 
-def getAllBreachesForAccount(p_email):
+def getAllBreachesForAccount(p_account):
+	"""
+	Returns a list of all breaches that 'p_account' has been involved in.
+	"""
 	try:
 		if(_CONNECTION == None):
 			raise ConnectionError
 		else:
-			url = "breachedAccount/"+p_email+"?includeUnverified=true"
-			return _getBreaches(url)
+			url = "breachedAccount/"+p_account+"?includeUnverified=true"
+			return _getData(url)
 	except ConnectionError as e:
 		print(e.message)
 
-def getAllBreachesForAccountOfDomain(p_email, p_domain):
+def getAllBreachesForAccountOfDomain(p_account, p_domain):
+	"""
+	Returns a list of all breaches that 'p_account' has been involved in.
+	Filters the result set to only breaches against the domain 'p_domain'.
+	"""
 	try:
 		if(_CONNECTION == None):
 			raise ConnectionError
 		else:
-			url = "breachedAccount/"+p_email+"?domain="+p_domain+"?includeUnverified=true"
-			return _getBreaches(url)
+			url = "breachedAccount/"+p_account+"?domain="+p_domain+"?includeUnverified=true"
+			return _getData(url)
 	except ConnectionError as e:
 		print(e.message)
 
 def getAllPastesForAccount(p_account):
+	"""
+	Returns a list of all pastes of 'p_account' in public sharing websites such as Pastebin.
+	The API takes a single parameter which need to be the email address to be searched for. 
+	"""
 	try:
 		if(_CONNECTION == None):
 			raise ConnectionError
 		else:
 			url = "pasteaccount/"+p_account
-			return _getBreaches(url)
+			return _getData(url)
 	except ConnectionError as e:
 		print(e.message)
 
 def getAllBreaches():
+	"""
+	Returns a list of all recent breaches.
+	"""
 	try:
 		if(_CONNECTION == None):
 			raise ConnectionError
 		else:
 			url = "breaches/"
-			return _getBreaches(url)
+			return _getData(url)
 	except ConnectionError as e:
 		print(e.message)
 
 def getAllBreachesOfDomain(p_domain):
+	"""
+	Returns a list of all recent breaches that 'p_domain' has been involved in.
+	"""
 	try:
 		if(_CONNECTION == None):
 			raise ConnectionError
 		else:
 			url = "breaches/"+"?domain="+p_domain
-			return _getBreaches(url)
+			return _getData(url)
 	except ConnectionError as e:
 		print(e.message)
 
 def getSingleBreachedSite(p_name):
+	"""
+	Returns a single site by the breach "name". 
+	"""
 	try:
 		if(_CONNECTION == None):
 			raise ConnectionError
 		else:
 			url = "breach/"+p_name
-			return _getBreaches(url)
+			return _getData(url)
 	except ConnectionError as e:
 		print(e.message)
 
 def getAllDataClasses():
+	"""
+	Returns a list of all data classes of breaches.
+	A "data class" is an attribute of a record compromised in a breach.
+	Examples of data classes are 'Email addresses' and 'Passwords'
+	"""
 	try:
 		if(_CONNECTION == None):
 			raise ConnectionError
 		else:
 			url = "dataclasses/"
-			return _getBreaches(url)
+			return _getData(url)
 	except ConnectionError as e:
 		print(e.message)
