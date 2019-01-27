@@ -2,25 +2,25 @@
 
 import time, re
 
-# Constants
 _CONNECTION = None
 _USERAGENT = ""
-_INTERVAL = 3
-_PROXYURL = ""
+_INTERVAL = 3	# in seconds
+
+_PROXY_ENABLED = False
+_PROXY_URL = ""
+_PROXY_AUTH_ENABLED = False
+_PROXY_AUTH = ""
+
 _BASE_APIURL = "https://haveibeenpwned.com/api/v2/"
 
 # Exceptions
 class ConnectionError(Exception):
-	"""
-	Exception raised by connection not started properly.
-	Attributes:
-		message -- explanation of the error
-	"""
 	def __init__(self):
-		_msg1 = "A connection has not been set,"
-		_msg2 = " use 'startConnection()' to start a connection"
-		_msg3 = " and 'setProxy(proxy_url)' if you are using a proxy."
-		self.message = _msg1+_msg2+_.msg3
+		self.message = "A connection has not been started properly."
+
+class UserAgentError(Exception):
+	def __init__(self):
+		self.message = "The user agent has not been set."
 
 # Local functions
 def _getJsonResponse(p_url):
@@ -71,31 +71,70 @@ def _getTextResponse(p_url):
 
 # Public functions
 def startConnection():
-	import urllib3
-	urllib3.disable_warnings()
-	from urllib3 import make_headers
-	if(_USERAGENT==""):
-		print("The user agent has not been set.")
-	else:
-		headers = make_headers(keep_alive=False, user_agent=_USERAGENT)
-		global _CONNECTION
-		if(_PROXYURL != ""):
-			from urllib3 import ProxyManager
-			_CONNECTION = urllib3.ProxyManager(proxy_url=_PROXYURL, headers=headers)
+	try:
+		if(_USERAGENT==""):
+			raise UserAgentError
 		else:
-			_CONNECTION = urllib3.PoolManager(headers=headers)
+			import urllib3
+			urllib3.disable_warnings()
+			from urllib3 import make_headers
+			global _CONNECTION
+
+			# TODO: improve if logic
+			if(_PROXY_AUTH_ENABLED == True):
+				headers = make_headers(keep_alive=False, user_agent=_USERAGENT, proxy_basic_auth=_PROXY_AUTH)
+			else:
+				headers = make_headers(keep_alive=False, user_agent=_USERAGENT)
+
+			if(_PROXY_ENABLED == True):
+				from urllib3 import ProxyManager
+				_CONNECTION = urllib3.ProxyManager(proxy_url=_PROXY_URL, headers=headers)
+			else:
+				_CONNECTION = urllib3.PoolManager(headers=headers)
+	except UserAgentError as e:
+		print(e.message)
+
+def setUserAgent(p_useragent):
+	if(type(p_useragent) is str):
+		global _USERAGENT
+		_USERAGENT = p_useragent
+	else:
+		print("The provided user agent is not a string.")
 
 def setProxy(p_proxyurl):
 	pattern = """(?:http|https)(?:\:\/\/)(?:[a-z]*(?:\.)?){5}(?:\:[0-9]{1,5})"""
 	if(re.match(pattern, p_proxyurl)):
-		global _PROXYURL
-		_PROXYURL = p_proxyurl
+		global _PROXY_URL
+		_PROXY_URL = p_proxyurl
 	else:
 		print("The provided proxy url is invalid.")
 
-def setUserAgent(p_useragent):
-	global _USERAGENT
-	_USERAGENT = p_useragent
+def enableProxy():
+	global _PROXY_ENABLED
+	_PROXY_ENABLED = True
+
+def disableProxy():
+	global _PROXY_ENABLED
+	_PROXY_ENABLED = False
+
+def setProxyAuth(p_username, p_password):
+	global _PROXY_AUTH
+	_PROXY_AUTH = p_username+":"+p_password
+	
+def enableProxyAuth():
+	global _PROXY_AUTH_ENABLED
+	_PROXY_AUTH_ENABLED = True
+
+def disableProxyAuth():
+	global _PROXY_AUTH_ENABLED
+	_PROXY_AUTH_ENABLED = False
+
+def setInterval(p_interval):
+	if(type(p_interval) is float):
+		global _INTERVAL
+		_INTERVAL = p_interval
+	else:
+		print("The provided interval is not a real number.")
 
 # Request functions
 def getAllBreachesForAccount(p_account):
