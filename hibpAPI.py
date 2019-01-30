@@ -1,7 +1,8 @@
 ﻿# Original author: Lucas Soares Pellizzaro on 2019-01-24
 
-import time, re
+import sys, time, re
 
+# Constants
 _CONNECTION = None
 _USERAGENT = ""
 _INTERVAL = 3	# in seconds
@@ -13,14 +14,22 @@ _PROXY_AUTH = ""
 
 _BASE_APIURL = "https://haveibeenpwned.com/api/v2/"
 
+
 # Exceptions
 class ConnectionError(Exception):
 	def __init__(self):
 		self.message = "A connection has not been started properly."
+		print(self.message)
 
 class UserAgentError(Exception):
 	def __init__(self):
 		self.message = "The user agent has not been set."
+		print(self.message)
+
+class UserInputError(Exception):
+	def __init__(self,varname):
+		self.message = "The provided "+varname+" is not a valid "+varname+"."
+		print(self.message)
 
 # Local functions
 def _getJsonResponse(p_url):
@@ -30,21 +39,25 @@ def _getJsonResponse(p_url):
 	# Checks the response status and returns output
 	if(str(this_request.status) == "200"):
 		import json
+		# TODO: fix invalid characters in json 'description' cell
 		json_raw = this_request.data.decode("utf-8")
 		func_output = {
 			"statuscode": 200,
 			"output": json.loads(json_raw)
 		}
+		print("Request retured with code "+str(this_request.status)+".")
 	elif(str(this_request.status) == "404"):
 		func_output = {
 			"statuscode": 404,
 			"output": []
 		}
+		print("Request retured with code "+str(this_request.status)+".")
 	else:
 		func_output = {
 			"statuscode": this_request.status,
 			"output": None
 		}
+		print("Request retured with code "+str(this_request.status)+".")
 	return func_output
 
 def _getTextResponse(p_url):
@@ -55,18 +68,21 @@ def _getTextResponse(p_url):
 	if(str(this_request.status) == "200"):
 		func_output = {
 			"statuscode": 200,
-			"output": this_request.data.decode("utf-8")
+			"output": this_request.data.decode("utf-8","replace")
 		}
+		print("Request retured with code "+str(this_request.status)+".")
 	elif(str(this_request.status) == "404"):
 		func_output = {
 			"statuscode": 404,
 			"output": ""
 		}
+		print("Request retured with code "+str(this_request.status)+".")
 	else:
 		func_output = {
 			"statuscode": this_request.status,
 			"output": None
 		}
+		print("Request retured with code "+str(this_request.status)+".")
 	return func_output
 
 # Public functions
@@ -80,17 +96,18 @@ def startConnection():
 			from urllib3 import make_headers
 			global _CONNECTION
 
-			# TODO: improve if logic
-			if(_PROXY_AUTH_ENABLED == True):
-				headers = make_headers(keep_alive=False, user_agent=_USERAGENT, proxy_basic_auth=_PROXY_AUTH)
-			else:
-				headers = make_headers(keep_alive=False, user_agent=_USERAGENT)
-
+			headers = make_headers(keep_alive=False, user_agent=_USERAGENT)
 			if(_PROXY_ENABLED == True):
+				msg = "The connection with proxy"
+				if(_PROXY_AUTH_ENABLED == True):
+					headers = make_headers(keep_alive=False, user_agent=_USERAGENT, proxy_basic_auth=_PROXY_AUTH)
+					msg = msg+" using proxy auth"
 				from urllib3 import ProxyManager
 				_CONNECTION = urllib3.ProxyManager(proxy_url=_PROXY_URL, headers=headers)
+				print(msg+" has started.")
 			else:
 				_CONNECTION = urllib3.PoolManager(headers=headers)
+				print("The connection without proxy has started.")
 	except UserAgentError as e:
 		print(e.message)
 
@@ -100,6 +117,7 @@ def setUserAgent(p_useragent):
 		_USERAGENT = p_useragent
 	else:
 		print("The provided user agent is not a string.")
+		sys.exit()
 
 def setProxy(p_proxyurl):
 	pattern = """(?:http|https)(?:\:\/\/)(?:[a-z]*(?:\.)?){5}(?:\:[0-9]{1,5})"""
@@ -108,6 +126,7 @@ def setProxy(p_proxyurl):
 		_PROXY_URL = p_proxyurl
 	else:
 		print("The provided proxy url is invalid.")
+		sys.exit()
 
 def enableProxy():
 	global _PROXY_ENABLED
@@ -135,49 +154,9 @@ def setInterval(p_interval):
 		_INTERVAL = p_interval
 	else:
 		print("The provided interval is not a real number.")
+		sys.exit()
 
 # Request functions
-def getAllBreachesForAccount(p_account):
-	"""
-	Returns a list of all breaches that 'p_account' has been involved in.
-	"""
-	try:
-		if(_CONNECTION == None):
-			raise ConnectionError
-		else:
-			url = _BASE_APIURL+"breachedAccount/"+p_account+"?includeUnverified=true"
-			return _getJsonResponse(url)
-	except ConnectionError as e:
-		print(e.message)
-
-def getAllBreachesForAccountOfDomain(p_account, p_domain):
-	"""
-	Returns a list of all breaches that 'p_account' has been involved in.
-	Filters the result set to only breaches against the domain 'p_domain'.
-	"""
-	try:
-		if(_CONNECTION == None):
-			raise ConnectionError
-		else:
-			url = _BASE_APIURL+"breachedAccount/"+p_account+"?domain="+p_domain+"?includeUnverified=true"
-			return _getJsonResponse(url)
-	except ConnectionError as e:
-		print(e.message)
-
-def getAllPastesForAccount(p_account):
-	"""
-	Returns a list of all pastes of 'p_account' in public sharing websites such as Pastebin.
-	The API takes a single parameter which need to be the email address to be searched for. 
-	"""
-	try:
-		if(_CONNECTION == None):
-			raise ConnectionError
-		else:
-			url = _BASE_APIURL+"pasteaccount/"+p_account
-			return _getJsonResponse(url)
-	except ConnectionError as e:
-		print(e.message)
-
 def getAllBreaches():
 	"""
 	Returns a list of all recent breaches.
@@ -190,6 +169,27 @@ def getAllBreaches():
 			return _getJsonResponse(url)
 	except ConnectionError as e:
 		print(e.message)
+	except UserInputError as e:
+		print(e.message)
+
+def getAllBreachesForAccount(p_account):
+	"""
+	Returns a list of all breaches that 'p_account' has been involved in.
+	"""
+	try:
+		if(_CONNECTION == None):
+			raise ConnectionError
+		else:
+			email_regex = """[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+"""
+			if(not(re.match(email_regex, p_account))):
+				raise UserInputError("email")
+			else:
+				url = _BASE_APIURL+"breachedAccount/"+p_account+"?includeUnverified=true"
+				return _getJsonResponse(url)
+	except ConnectionError as e:
+		print(e.message)
+	except UserInputError as e:
+		print(e.message)
 
 def getAllBreachesOfDomain(p_domain):
 	"""
@@ -199,9 +199,59 @@ def getAllBreachesOfDomain(p_domain):
 		if(_CONNECTION == None):
 			raise ConnectionError
 		else:
-			url = _BASE_APIURL+"breaches/"+"?domain="+p_domain
-			return _getJsonResponse(url)
+			domain_regex = """[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+"""
+			if(not(re.match(domain_regex, p_domain))):
+				raise UserInputError("domain")
+			else:
+				url = _BASE_APIURL+"breaches/"+"?domain="+p_domain
+				return _getJsonResponse(url)
 	except ConnectionError as e:
+		print(e.message)
+	except UserInputError as e:
+		print(e.message)
+
+def getAllBreachesForAccountOfDomain(p_account, p_domain):
+	"""
+	Returns a list of all breaches that 'p_account' has been involved in.
+	Filters the result set to only breaches against the domain 'p_domain'.
+	"""
+	try:
+		if(_CONNECTION == None):
+			raise ConnectionError
+		else:
+			email_regex = """[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+"""
+			if(not(re.match(email_regex, p_account))):
+				raise UserInputError("email")
+			else:
+				domain_regex = """[0-9a-z][0-9a-z-\.]{1,61}[0-9a-z]\.[0-9a-z][a-z-]*[0-9a-z]+"""
+				if(not(re.match(domain_regex, p_domain))):
+					raise UserInputError("domain")
+				else:
+					url = _BASE_APIURL+"breachedAccount/"+p_account+"?domain="+p_domain+"?includeUnverified=true"
+					return _getJsonResponse(url)
+	except ConnectionError as e:
+		print(e.message)
+	except UserInputError as e:
+		print(e.message)
+
+def getAllPastesForAccount(p_account):
+	"""
+	Returns a list of all pastes of 'p_account' in public sharing websites such as Pastebin.
+	The API takes a single parameter which need to be the email address to be searched for. 
+	"""
+	try:
+		if(_CONNECTION == None):
+			raise ConnectionError
+		else:
+			email_regex = """[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+"""
+			if(not(re.match(email_regex, p_account))):
+				raise UserInputError("email")
+			else:
+				url = _BASE_APIURL+"pasteaccount/"+p_account
+				return _getJsonResponse(url)
+	except ConnectionError as e:
+		print(e.message)
+	except UserInputError as e:
 		print(e.message)
 
 def getSingleBreachedSite(p_name):
@@ -242,7 +292,13 @@ def getPwnedPasswords(p_hash5):
 		if(_CONNECTION == None):
 			raise ConnectionError
 		else:
-			url = "https://api.pwnedpasswords.com/range/"+p_hash5
-			return _getTextResponse(url)
+			hash_regex = """[0123456789abcdef]{5}"""
+			if(not(re.match(hash_regex, p_hash5))):
+				raise UserInputError("hash")
+			else:
+				url = "https://api.pwnedpasswords.com/range/"+p_hash5
+				return _getTextResponse(url)
 	except ConnectionError as e:
+		print(e.message)
+	except UserInputError as e:
 		print(e.message)
